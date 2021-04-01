@@ -6,7 +6,7 @@ But now there is the Tanzu Build Service!
 
 The [Tanzu Build Service](https://tanzu.vmware.com/build-service) (TBS) automatically creates container images without Dockerfiles. TBS uses buildpacks which, unlike Dockerfiles, don't smash together the operating system, dependencies, and application code. Buildpacks keep these pieces separate, which means we can easily "patch" the operating system without having to worry about affecting the application.
 
-TBS manages building container images for you and is native to Kubernetes. It becomes the container image control plane that has been missing in the ecosystem.
+TBS provides the underlying image layers (based on Ubuntu), builds the images, caches layers, pushes the images to your registry, is native to Kubernetes, and more. TBS is the container image control plane that has been missing in the ecosystem.
 
 ## What will we do?
 
@@ -14,17 +14,21 @@ Usually it is quite difficult to patch every single image in a Kubernetes cluste
 
 So we will: 
 
-1. Create a specifically insecure ClusterStack and ClusterBuilder made up of months old operating system images
+1. Create a specifically insecure ClusterStack and ClusterBuilder which uses image layers a few months old (therefore "insecure")
 2. Use TBS to build an image 
 3. Scan the resulting image with `trivy`
 4. Update the ClusterStack with newer images
 5. Tell TBS to rebuild the image
 6. Scan the new image with `trivy` and compare the CVEs to the initial image
 
+>NOTE: This is a demo that has a lot of manual steps, but in a production situation, this would all be automated and taken care of by the TBS. We do some manual steps here to create "insecure" images to test with.
+
 ## Requirements 
 
-* TBS is already installed and configured
+* TBS already installed and configured ito a Kubernetes cluster
 * `pivnet` is installed and can access the Tanzu network
+* [Trivy](https://github.com/aquasecurity/trivy) installed
+* Docker to pull images
 
 ## Clone this repository
 
@@ -37,7 +41,7 @@ cd tanzu-build-service-control-plane-demo
 
 ### Download the descriptor files.
 
-First, let's get a quiet old descriptor.
+First, let's get an old descriptor.
 
 ```
 pivnet download-product-files --product-slug='tbs-dependencies' --release-version='100.0.55' --product-file-id=853492
