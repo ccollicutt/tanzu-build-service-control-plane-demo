@@ -10,9 +10,16 @@ TBS manages building container images for you and is native to Kubernetes. It be
 
 ## What will we do?
 
-In this demo we will simulate "patching" a container image, or set of images, with a newer underying operating system. The idea being that the "older" images are insecure simply because they have CVEs that haven't been fixed, where the newer images have had the CVEs fixed.
-
 Usually it is quite difficult to patch every single image in a Kubernetes cluster, because they are typically all built by different teams, have different Dockerfiles, etc, etc. So with this demo we can show building an insecure image, then patching it, and recreating it, all of which is handled by TBS.
+
+So we will: 
+
+1. Create a specifically insecure ClusterStack and ClusterBuilder made up of months old operating system images
+2. Use TBS to build an image 
+3. Scan the resulting image with `trivy`
+4. Update the ClusterStack with newer images
+5. Tell TBS to rebuild the image
+6. Scan the new image with `trivy` and compare the CVEs to the initial image
 
 ## Requirements 
 
@@ -388,7 +395,7 @@ Status: Downloaded newer image for TBS_REPOSITORY/demo-image:latest
 TBS_REPOSITORY/demo-image:latest
 ```
 
-Now if we scan the image again it will show fewer, or in this case zero, `HIGH` or `CRITICAL` CVEs.
+Now if we scan the image again it will show fewer, or in this case zero, `HIGH` or `CRITICAL` CVEs. This is expected because the images making up the ClusterStack are much newer.
 
 ```
 $ trivy -q --severity=HIGH,CRITICAL $TBS_REPOSITORY/demo-image | grep Total
