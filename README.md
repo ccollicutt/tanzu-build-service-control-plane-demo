@@ -190,7 +190,7 @@ kp image create demo-image \
 Watch the logs of the image being built.
 
 ```
-$ kp build logs demo-image
+$ kp build logs demo-image
 ===> PREPARE
 Build reason(s): CONFIG
 CONFIG:
@@ -263,7 +263,7 @@ Use Trivy to scan the image for security issues, noting how many `HIGH` or `CRIT
 >NOTE: This image was built with the older, "insecure" images which we will patch.
 
 ```
-$ /tmp/trivy -q --severity=HIGH,CRITICAL $TBS_REPOSITORY/demo-image | grep Total
+$ trivy -q --severity=HIGH,CRITICAL $TBS_REPOSITORY/demo-image | grep Total
 Total: 7 (HIGH: 7, CRITICAL: 0)
 ```
 
