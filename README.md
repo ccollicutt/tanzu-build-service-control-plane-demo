@@ -17,8 +17,7 @@ So we will:
 1. Create a specifically insecure ClusterStack and ClusterBuilder which uses image layers a few months old (therefore "insecure")
 2. Use TBS to build an image 
 3. Scan the resulting image with `trivy`
-4. Update the ClusterStack with newer images
-5. Tell TBS to rebuild the image
+4. Update the ClusterStack with newer images, which causes a rebuild
 6. Scan the new image with `trivy` and compare the CVEs to the initial image
 
 >NOTE: This is a demo that has a lot of manual steps, but in a production situation, this would all be automated and taken care of by the TBS. We do some manual steps here to create "insecure" images to test with.
@@ -213,7 +212,7 @@ CONFIG:
 	+     url: https://github.com/ccollicutt/tbs-sample-apps/
 	+   subPath: sample-apps/go
 Loading secret for "gcr.io" from secret "gcr-secret" at location "/var/build-secrets/gcr-secret"
-Loading secret for "harbor.shared.demo.globalbanque.com" from secret "harbor-creds" at location "/var/build-secrets/harbor-creds"
+Loading secret for "HARBOR_REPO" from secret "harbor-creds" at location "/var/build-secrets/harbor-creds"
 Cloning "https://github.com/ccollicutt/tbs-sample-apps/" @ "513fd440fec8e79bdc78b500b37f6b23881af951"...
 Successfully cloned "https://github.com/ccollicutt/tbs-sample-apps/" @ "513fd440fec8e79bdc78b500b37f6b23881af951" in path "/workspace"
 ===> DETECT
@@ -315,13 +314,7 @@ Uploading to 'TBS_REPOSITORY'...
 ClusterStack "demo-stack" updated
 ```
 
-### Trigger a Build
-
-We can force the image to be rebuilt.
-
-```
-kp image trigger demo-image
-```
+Updating the stack will cause a rebuild of the image.
 
 Watch the logs of the build.
 
@@ -332,7 +325,7 @@ Build reason(s): TRIGGER
 TRIGGER:
 	+ A new build was manually triggered on Thu, 01 Apr 2021 20:52:35 +0000
 Loading secret for "gcr.io" from secret "gcr-secret" at location "/var/build-secrets/gcr-secret"
-Loading secret for "harbor.shared.demo.globalbanque.com" from secret "harbor-creds" at location "/var/build-secrets/harbor-creds"
+Loading secret for "HARBOR_REPO" from secret "harbor-creds" at location "/var/build-secrets/harbor-creds"
 Cloning "https://github.com/ccollicutt/tbs-sample-apps/" @ "513fd440fec8e79bdc78b500b37f6b23881af951"...
 Successfully cloned "https://github.com/ccollicutt/tbs-sample-apps/" @ "513fd440fec8e79bdc78b500b37f6b23881af951" in path "/workspace"
 ===> DETECT
