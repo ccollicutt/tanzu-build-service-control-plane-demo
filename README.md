@@ -12,7 +12,7 @@ TBS manages building container images for you and is native to Kubernetes. It be
 
 In this demo we will simulate "patching" a container image, or set of images, with a newer underying operating system. The idea being that the "older" images are insecure simply because they have CVEs that haven't been fixed, where the newer images have had the CVEs fixed.
 
-Usually it is quite difficult to patch every single image in a Kubernetes cluster, because they are typically all built by different teams, have different Dockerfiles, etc, etc.
+Usually it is quite difficult to patch every single image in a Kubernetes cluster, because they are typically all built by different teams, have different Dockerfiles, etc, etc. So with this demo we can show building an insecure image, then patching it, and recreating it, all of which is handled by TBS.
 
 ## Requirements 
 
@@ -122,7 +122,7 @@ Create clusterstack based on "insecure" (ie. older) images, which are part of th
 ```
 $ grep cf87e6b7e69c5394440c11d41c8d46eade57d13236e4fb79c80227cc15d33abf ./descriptor-100.0.55.yaml 
     image: registry.pivotal.io/tbs-dependencies/build-full@sha256:cf87e6b7e69c5394440c11d41c8d46eade57d13236e4fb79c80227cc15d33abf
-$ grep 52a9a0002b16042b4d34382bc244f9b6bf8fd409557fe3ca8667a5a52da44608 descriptor-100.0.55.yaml 
+$ grep 52a9a0002b16042b4d34382bc244f9b6bf8fd409557fe3ca8667a5a52da44608 descriptor-100.0.55.yaml 
     image: registry.pivotal.io/tbs-dependencies/run-full@sha256:52a9a0002b16042b4d34382bc244f9b6bf8fd409557fe3ca8667a5a52da44608
 ```
 
