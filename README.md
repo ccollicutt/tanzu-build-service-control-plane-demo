@@ -356,7 +356,7 @@ Adding cache layer 'tanzu-buildpacks/go-build:gocache'
 Build successful
 ```
 
-## Pull and check the image again
+### Pull and Scan the Image Again
 
 Get the new version of the image that TBS built.
 
@@ -369,7 +369,7 @@ eg. output:
 ```
 $ docker pull $TBS_REPOSITORY/demo-image
 Using default tag: latest
-latest: Pulling from pa-ccollicutt/build-service/demo-image
+latest: Pulling from TBS_REPOSITORY/demo-image
 7a3dbe310959: Pull complete 
 d607b3dbf740: Pull complete 
 0a865ece12ec: Pull complete 
