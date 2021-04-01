@@ -50,7 +50,7 @@ $ pivnet download-product-files --product-slug='tbs-dependencies' --release-vers
 2021/04/01 16:07:32 Successfully verified SHA256
 ```
 
-## Import the Descriptors
+### Import the Descriptors
 
 >NOTE: This can take 10-15 minutes or more to complete.
 
@@ -105,7 +105,7 @@ Importing ClusterBuilder 'default'...
 Imported resources
 ```
 
-### Build a "insecure" Clusterbuildler
+### Build a "insecure" Clusterbuilder
 
 Set your repository.
 
@@ -164,7 +164,7 @@ $ kp clusterbuilder create demo-cluster-builder \
 ClusterBuilder "demo-cluster-builder" created
 ```
 
-## Build an Image
+### Build an Image
 
 First, identify where you are going to push the image once TBS has built it. 
 
@@ -248,7 +248,7 @@ Adding cache layer 'tanzu-buildpacks/go-build:gocache'
 Build successful
 ```
 
-## Investigate the Image
+### Investigate the Image
 
 Pull the image locally.
 
@@ -265,7 +265,7 @@ $ /tmp/trivy -q --severity=HIGH,CRITICAL $TBS_REPOSITORY/demo-image | grep To
 Total: 7 (HIGH: 7, CRITICAL: 0)
 ```
 
-## Update the Image 
+### Update the Image 
 
 We'll use the build and run images from the more recent descriptor file.
 
@@ -288,19 +288,18 @@ Uploading to 'TBS_REPOSITORY'...
 ClusterStack "demo-stack" updated
 ```
 
+### Trigger a Build
 
-## Trigger a Build
-
-
-```
-$ kp image trigger demo-image
-Triggered build for Image "demo-image"
-```
-
-Watch the logs.
+We can force the image to be rebuilt.
 
 ```
-$ kp build logs demo-image
+kp image trigger demo-image
+```
+
+Watch the logs of the build.
+
+```
+$ kp build logs demo-image
 ===> PREPARE
 Build reason(s): TRIGGER
 TRIGGER:
@@ -362,6 +361,12 @@ Build successful
 Get the new version of the image that TBS built.
 
 ```
+docker pull $TBS_REPOSITORY/demo-image
+```
+
+eg. output:
+
+```
 $ docker pull $TBS_REPOSITORY/demo-image
 Using default tag: latest
 latest: Pulling from pa-ccollicutt/build-service/demo-image
@@ -388,11 +393,13 @@ $ trivy -q --severity=HIGH,CRITICAL $TBS_REPOSITORY/demo-image | grep Total
 Total: 0 (HIGH: 0, CRITICAL: 0)
 ```
 
+Awesome.
+
 ## Conclusion
 
 Now imagine easily and efficiently rebuilding all of your images with a simple command.
 
-Also remember that because of how buildpacks work, we don't have to be scared to update the image because it'll break the application.
+Also remember that because of how buildpacks work, we don't have to be scared to update the image because it'll break the application, buidlpacks have separated the operating sytem, dependencies, and application code instead of smashing them together into something unrecognizable (which is basically what Dockerfiles do).
 
 One the images are automagically rebuilt, we can use Kubernetes to recreate all of the pods, and therefore have updated and secure EVERY application in our portfolio.
 
