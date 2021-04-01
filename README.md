@@ -1,10 +1,12 @@
 # Tanzu Build Service Control Plane Demo
 
-The Tanzu Build Service (TBS) automatically creates container images without Dockerfiles. TBS uses buildpacks which, unlike Dockerfiles, don't smash together the operating system, dependencies, and application code. Buildpacks keep these pieces separate, which means we can easily "patch" the operating system without having to worry about affecting the application.
+While Kubernetes is a control plane for containers it doesn’t do much for managing images. That functionality is left to external systems. But are there any tools that are considered a “control plane” for container images? Historically there has not been. We have left that work to Dockerfiles, scanning tools, and CI/CD pipelines, which is to say a typically a bunch of untested bash and various leaky abstractions.
 
-What's more, because by using TBS we standardize the container images, it becomes very easy to fix every single container running, should there be some kind of security issue.
+But now there is the Tanzu Build Service!
 
-Finally, with these things in mind, TBS becomes a control plane for your container images.
+The [Tanzu Build Service](https://tanzu.vmware.com/build-service) (TBS) automatically creates container images without Dockerfiles. TBS uses buildpacks which, unlike Dockerfiles, don't smash together the operating system, dependencies, and application code. Buildpacks keep these pieces separate, which means we can easily "patch" the operating system without having to worry about affecting the application.
+
+TBS manages building container images for you and is native to Kubernetes. It becomes the container image control plane that has been missing in the ecosystem.
 
 ## What will we do?
 
