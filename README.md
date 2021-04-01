@@ -257,6 +257,20 @@ Adding cache layer 'tanzu-buildpacks/go-build:gocache'
 Build successful
 ```
 
+Inspect the Kubernetes object and note the ClusterBuider name.
+
+```
+kubectl get image demo-image -oyaml| grep "kind: ClusterBuilder" -A 1
+```
+
+eg. output:
+
+```
+$ kubectl get image demo-image -oyaml| grep "kind: ClusterBuilder" -A 1
+    kind: ClusterBuilder
+    name: demo-cluster-builder
+```
+
 ### Investigate the Image
 
 Pull the image locally.
