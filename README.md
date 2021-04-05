@@ -20,7 +20,7 @@ So we will:
 4. Update the ClusterStack with newer images, which causes a rebuild
 6. Scan the new image with `trivy` and compare the CVEs to the initial image
 
->NOTE: This is a demo that has a lot of manual steps, but in a production situation, this would all be automated and taken care of by the TBS. We do some manual steps here to create "insecure" images to test with.
+>NOTE: This is a demo that has many manual steps, but in a production situation this would all be automated and taken care of by the TBS. We perform some manual steps here to create "insecure" images used to show how TBS keeps our container images up to date without people in the organization getting engaged in any image management toil.
 
 ## Requirements 
 
@@ -291,9 +291,11 @@ $ trivy -q --severity=HIGH,CRITICAL $TBS_REPOSITORY/demo-image | grep Total
 Total: 7 (HIGH: 7, CRITICAL: 0)
 ```
 
-### Update the Image 
+### Update the ClusterStack, Causing a New Image Build
 
-We'll use the build and run images from the more recent descriptor file.
+Now we want to get rid of those pesky CVEs.
+
+We'll use the build and run images from the more recent descriptor file which will have most, if not all, of the CVEs fixed.
 
 ```
 kp clusterstack update demo-stack  \
@@ -378,7 +380,7 @@ Build successful
 
 ### Pull and Scan the Image Again
 
-Get the new version of the image that TBS built.
+Get the new version of the image that TBS just built.
 
 ```
 docker pull $TBS_REPOSITORY/demo-image
@@ -406,7 +408,7 @@ Status: Downloaded newer image for TBS_REPOSITORY/demo-image:latest
 TBS_REPOSITORY/demo-image:latest
 ```
 
-Now if we scan the image again it will show fewer, or in this case zero, `HIGH` or `CRITICAL` CVEs. This is expected because the images making up the ClusterStack are much newer.
+Now if we scan the image again it will show fewer, or in this case zero, `HIGH` or `CRITICAL` CVEs. This is expected because the images making up the updated ClusterStack are much newer.
 
 ```
 $ trivy -q --severity=HIGH,CRITICAL $TBS_REPOSITORY/demo-image | grep Total
