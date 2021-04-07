@@ -1,24 +1,32 @@
 # Tanzu Build Service Control Plane Demo
 
-While Kubernetes is a control plane for containers it doesn’t do much for managing images. That functionality is left to external systems. But are there any tools that are considered a “control plane” for container images? Historically there has not been. We have left that work to Dockerfiles, scanning tools, and CI/CD pipelines, which is to say a typically a bunch of untested bash and various leaky abstractions.
+While Kubernetes is a control plane for containers it doesn’t do much for managing images. That functionality is left to external systems. But are there any tools that are considered a “control plane” for container images? Not really. (Let me know if you find any.) 
 
-But now there is the Tanzu Build Service!
+We can't deploy anything into Kubernetes without a container image. For the most part we have left that work to Dockerfiles, scanning tools, and CI/CD pipelines, which is to say a typically a bunch of untested bash and various leaky abstractions.
 
-The [Tanzu Build Service](https://tanzu.vmware.com/build-service) (TBS) automatically creates container images without Dockerfiles. TBS uses buildpacks which, unlike Dockerfiles, don't smash together the operating system, dependencies, and application code. Buildpacks keep these pieces separate, which means we can easily "patch" the operating system without having to worry about affecting the application.
+But now there is the **Tanzu Build Service**!
 
-TBS provides the underlying image layers (based on Ubuntu), builds the images, caches layers, pushes the images to your registry, is native to Kubernetes, and more. TBS is the container image control plane that has been missing in the ecosystem.
+The [Tanzu Build Service](https://tanzu.vmware.com/build-service) (TBS) automatically creates container images without Dockerfiles. TBS uses buildpacks which, unlike Dockerfiles, don't hash together the operating system, dependencies, and application code. Buildpacks keep these pieces separate, which means we can easily "patch" the operating system without having to worry about affecting the application.
 
-## What will we do?
+TBS provides the underlying image layers (based on Ubuntu), builds the images, caches layers, pushes the images to your registry, is native to Kubernetes, and more. TBS is the container image **control plane** that has been missing, and desperately needed, in the ecosystem.
 
-Usually it is quite difficult to patch every single image in a Kubernetes cluster, because they are typically all built by different teams, have different Dockerfiles, etc, etc. So with this demo we can show building an insecure image, then patching it, and recreating it, all of which is handled by TBS.
+## What will we do...and why?
 
-So we will: 
+If an organization is using Kubernetes, that means they have container images. But where do these container images come from? How are they created? How are they updated?
 
-1. Create a specifically insecure ClusterStack and ClusterBuilder which uses image layers a few months old (therefore "insecure")
-2. Use TBS to build an image 
+Usually it's difficult, even impossible, to easily patch every single container image in an organization. This is because the images are often built by different teams, have different Dockerfiles, different base images, different libraries, etc, etc. Frankly, who's to say that the use of Dockerfiles is even the right abstraction?
+
+With this demo we can show building an insecure image, then patching it, and recreating it, all of which is handled by TBS. Importantly, we use a different abstraction, Buildpacks, to create the container images, which means there are no Dockerfiles.
+
+In this demo we will: 
+
+1. Create a specifically insecure ClusterStack and ClusterBuilder which uses image layers a few months old (therefore "insecure" in terms of CVEs)
+2. Use TBS to build an image from that builder
 3. Scan the resulting image with `trivy`
-4. Update the ClusterStack with newer images, which causes a rebuild
+4. Update the ClusterStack with newer images, which causes a rebuild of the image
 6. Scan the new image with `trivy` and compare the CVEs to the initial image
+
+Once we're done, it's easy to see how we can create a "control plane" for images and actually be able, from an operational perspective, to rebuild 100s or 1000s of images across the organiztion in a repetable, predictable, progammable manner.
 
 >NOTE: This is a demo that has many manual steps, but in a production situation this would all be automated and taken care of by the TBS. We perform some manual steps here to create "insecure" images used to show how TBS keeps our container images up to date without people in the organization getting engaged in any image management toil.
 
@@ -42,19 +50,19 @@ cd tanzu-build-service-control-plane-demo
 
 First, let's get an old descriptor.
 
-```
+```bash
 pivnet download-product-files --product-slug='tbs-dependencies' --release-version='100.0.55' --product-file-id=853492
 ```
 
 Now a much newer descriptor, which will have a newer image (ie. one with fewer vulnerabilities--simply because it's newer and the underlying images are updated every couple of days).
 
-```
+```bash
 pivnet download-product-files --product-slug='tbs-dependencies' --release-version='100.0.90' --product-file-id=919092
 ```
 
-eg. output:
+<details><summary>View output</summary><p>
 
-```
+```bash
 $ pivnet download-product-files --product-slug='tbs-dependencies' --release-version='100.0.90' --product-file-id=919092
 2021/04/01 16:07:31 Downloading 'descriptor-100.0.90.yaml' to 'descriptor-100.0.90.yaml'
  3.38 KiB / 3.38 KiB [==============================================] 100.00% 0s
@@ -62,18 +70,22 @@ $ pivnet download-product-files --product-slug='tbs-dependencies' --release-vers
 2021/04/01 16:07:32 Successfully verified SHA256
 ```
 
+</p></details>
+
 ### Import the Descriptors
 
->NOTE: This can take 10-15 minutes or more to complete.
+| :large_blue_diamond: The import can take 10-15 minutes or more to complete.
+|--------------------------------------------------------------------------|
 
-```
+```bash
 kp import -f descriptor-100.0.55.yaml
 kp import -f descriptor-100.0.90.yaml
 ```
 
-eg. output for the `descriptor-100.0.90.yaml` descriptor file.
+<details><summary>View example output</summary>
+<p>
 
-```
+```bash
 $ kp import -f descriptor-100.0.90.yaml
 Importing ClusterStore 'default'...
 	Uploading 'TBS_REPOSITORY/tanzu-buildpacks_go@sha256:2146fb2de550f162a49b5f4c2d6183f8f7c63a9a7c432635f65785f4e0330bff'
@@ -117,19 +129,23 @@ Importing ClusterBuilder 'default'...
 Imported resources
 ```
 
+</p>
+</details>
+
 ### Build a "insecure" Clusterbuilder
 
 Set your repository.
 
->NOTE: You would have a repository for TBS already because we are assuming it's already installed.
+| :large_blue_diamond: You would have a repository for TBS already because we are assuming it's already installed.  |
+|--------------------------------------------------------------------------|
 
-```
+```bash
 export TBS_REPOSITORY=<your container image registry>
 ```
 
 Create clusterstack based on "insecure" (ie. older) images, which are part of the `descriptor-100.0.55.yaml` descriptor.
 
-```
+```bash
 $ grep cf87e6b7e69c5394440c11d41c8d46eade57d13236e4fb79c80227cc15d33abf ./descriptor-100.0.55.yaml 
     image: registry.pivotal.io/tbs-dependencies/build-full@sha256:cf87e6b7e69c5394440c11d41c8d46eade57d13236e4fb79c80227cc15d33abf
 $ grep 52a9a0002b16042b4d34382bc244f9b6bf8fd409557fe3ca8667a5a52da44608 descriptor-100.0.55.yaml 
@@ -138,15 +154,16 @@ $ grep 52a9a0002b16042b4d34382bc244f9b6bf8fd409557fe3ca8667a5a52da44608 descript
 
 Create the stack.
 
-```
+```bash
 kp clusterstack create demo-stack  \
   --build-image $TBS_REPOSITORY/build@sha256:cf87e6b7e69c5394440c11d41c8d46eade57d13236e4fb79c80227cc15d33abf \
   --run-image $TBS_REPOSITORY/run@sha256:52a9a0002b16042b4d34382bc244f9b6bf8fd409557fe3ca8667a5a52da44608
 ```
 
-eg. output:
+<details><summary>View output</summary>
+<p>
 
-```
+```bash
 $ kp clusterstack create demo-stack  --build-image $TBS_REPOSITORY/build@sha256:cf87e6b7e69c5394440c11d41c8d46eade57d13236e4fb79c80227cc15d33abf   --run-image $TBS_REPOSITORY/run@sha256:52a9a0002b16042b4d34382bc244f9b6bf8fd409557fe3ca8667a5a52da44608
 Creating ClusterStack...
 Uploading to 'TBS_REPOSITORY'...
@@ -155,9 +172,12 @@ Uploading to 'TBS_REPOSITORY'...
 ClusterStack "demo-stack" created
 ```
 
+</p>
+</details>
+
 And create a customer cluster builder that uses that stack.
 
-```
+```bash
 kp clusterbuilder create demo-cluster-builder \
   --tag $TBS_REPOSITORY/demo-cluster-builder \
   --order demo-cluster-builder-order.yaml \
@@ -165,9 +185,10 @@ kp clusterbuilder create demo-cluster-builder \
   --store default
 ```
 
-eg. output:
+<details><summary>View output</summary>
+<p>
 
-```
+```bash
 $ kp clusterbuilder create demo-cluster-builder \
 >   --tag $TBS_REPOSITORY/demo-cluster-builder \
 >   --order demo-cluster-builder-order.yaml \
@@ -176,19 +197,23 @@ $ kp clusterbuilder create demo-cluster-builder \
 ClusterBuilder "demo-cluster-builder" created
 ```
 
+</p>
+</details>
+
 ### Build an Image
 
 First, identify where you are going to push the image once TBS has built it. 
 
->NOTE: It will probably be the same as TBS is using, but doesn't have to be.
+| :large_blue_diamond:  It will probably be the same as TBS is using, but doesn't have to be.
+|--------------------------------------------------------------------------|
 
-```
+```bash
 export TBS_REPOSITORY=<your container image registry>
 ```
 
 Now build the image.
 
-```
+```bash
 kp image create demo-image \
 --tag $TBS_REPOSITORY/demo-image \
 --git https://github.com/ccollicutt/tbs-sample-apps/ \
@@ -198,6 +223,13 @@ kp image create demo-image \
 ```
 
 Watch the logs of the image being built.
+
+```
+kb build logs demo-image
+```
+
+<details><summary>View output</summary>
+<p>
 
 ```
 $ kp build logs demo-image
@@ -260,33 +292,40 @@ Adding cache layer 'tanzu-buildpacks/go-build:gocache'
 Build successful
 ```
 
+<p>
+</details>
+
 Inspect the Kubernetes object and note the ClusterBuider name.
 
-```
+```bash
 kubectl get image demo-image -oyaml| grep "kind: ClusterBuilder" -A 1
 ```
 
-eg. output:
+<details><summary>View output</summary>
+<p>
 
-```
+```bash
 $ kubectl get image demo-image -oyaml| grep "kind: ClusterBuilder" -A 1
     kind: ClusterBuilder
     name: demo-cluster-builder
 ```
+</p>
+</details>
 
 ### Investigate the Image
 
 Pull the image locally.
 
-```
+```bash
 docker pull $TBS_REPOSITORY/demo-image
 ```
 
 Use Trivy to scan the image for security issues, noting how many `HIGH` or `CRITICAL` there are.
 
->NOTE: This image was built with the older, "insecure" images which we will patch.
+| :large_blue_diamond: It will probably be the same as TBS is using, but doesn't have to be.  |
+|--------------------------------------------------------------------------|
 
-```
+```bash
 $ trivy -q --severity=HIGH,CRITICAL $TBS_REPOSITORY/demo-image | grep Total
 Total: 7 (HIGH: 7, CRITICAL: 0)
 ```
@@ -297,13 +336,14 @@ Now we want to get rid of those pesky CVEs.
 
 We'll use the build and run images from the more recent descriptor file which will have most, if not all, of the CVEs fixed.
 
-```
+```bash
 kp clusterstack update demo-stack  \
   --build-image $TBS_REPOSITORY/build@sha256:d0e8bfb686fd3bc5463bd79f33a31d1dc9528a37f88ffc26a64ff0949173223d \
   --run-image $TBS_REPOSITORY/run@sha256:84eff69367995f990875cdbd47b2dc427c0bac27ae15f2a115090962e6969421
 ```
 
-eg. output:
+<details><summary>View output</summary>
+<p>
 
 ```
 kp clusterstack update demo-stack  \
@@ -316,11 +356,19 @@ Uploading to 'TBS_REPOSITORY'...
 ClusterStack "demo-stack" updated
 ```
 
+</p></details>
+
 Updating the stack will cause a rebuild of the image.
 
 Watch the logs of the build.
 
+```bash
+kp build logs demo-image
 ```
+
+<details><summary>View output</summary><p>
+
+```bash
 $ kp build logs demo-image
 ===> PREPARE
 Build reason(s): TRIGGER
@@ -378,17 +426,19 @@ Adding cache layer 'tanzu-buildpacks/go-build:gocache'
 Build successful
 ```
 
+</p></details>
+
 ### Pull and Scan the Image Again
 
 Get the new version of the image that TBS just built.
 
-```
+```bash
 docker pull $TBS_REPOSITORY/demo-image
 ```
 
-eg. output:
+<details><summary>View output</summary><p>
 
-```
+```bash
 $ docker pull $TBS_REPOSITORY/demo-image
 Using default tag: latest
 latest: Pulling from TBS_REPOSITORY/demo-image
@@ -408,9 +458,11 @@ Status: Downloaded newer image for TBS_REPOSITORY/demo-image:latest
 TBS_REPOSITORY/demo-image:latest
 ```
 
+</p></details>
+
 Now if we scan the image again it will show fewer, or in this case zero, `HIGH` or `CRITICAL` CVEs. This is expected because the images making up the updated ClusterStack are much newer.
 
-```
+```bash
 $ trivy -q --severity=HIGH,CRITICAL $TBS_REPOSITORY/demo-image | grep Total
 Total: 0 (HIGH: 0, CRITICAL: 0)
 ```
