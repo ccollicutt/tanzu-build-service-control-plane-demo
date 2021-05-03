@@ -1,0 +1,2 @@
+export TBS_REPOSITORY=tbs.some.image.repository.com
+export REPOSITORY=images.another.repository.com

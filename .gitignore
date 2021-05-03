@@ -1,1 +1,5 @@
 descriptor*.yaml
+NOTES.md
+.envrc
+*.json
+GCR.md

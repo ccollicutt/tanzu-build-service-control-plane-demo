@@ -16,8 +16,6 @@ If an organization is using Kubernetes, that means they have container images. B
 
 Usually it's difficult, even impossible, to easily patch every single container image in an organization. This is because the images are often built by different teams, have different Dockerfiles, different base images, different libraries, etc, etc. Frankly, who's to say that the use of Dockerfiles is even the right abstraction?
 
-With this demo we can show building an insecure image, then patching it, and recreating it, all of which is handled by TBS. Importantly, we use a different abstraction, Buildpacks, to create the container images, which means there are no Dockerfiles.
-
 In this demo we will: 
 
 1. Create a specifically insecure ClusterStack and ClusterBuilder which uses image layers a few months old (therefore "insecure" in terms of CVEs)
@@ -26,7 +24,7 @@ In this demo we will:
 4. Update the ClusterStack with newer images, which causes a rebuild of the image
 6. Scan the new image with `trivy` and compare the CVEs to the initial image
 
-Once we're done, it's easy to see how we can create a "control plane" for images and actually be able, from an operational perspective, to rebuild 100s or 1000s of images across the organiztion in a repetable, predictable, progammable manner.
+Once we're done, it's easy to see how we can create a "control plane" for images and actually be able, from an operational perspective, to rebuild 100s or 1000s of images across the organization in a repeatable, predictable, programmable manner.
 
 >NOTE: This is a demo that has many manual steps, but in a production situation this would all be automated and taken care of by the TBS. We perform some manual steps here to create "insecure" images used to show how TBS keeps our container images up to date without people in the organization getting engaged in any image management toil.
 
@@ -36,12 +34,53 @@ Once we're done, it's easy to see how we can create a "control plane" for images
 * `pivnet` is installed and can access the Tanzu network
 * [Trivy](https://github.com/aquasecurity/trivy) installed
 * Docker to pull images
+* `kubens` is aliased to `kn` 
 
 ## Clone this repository
 
 ```
 git clone https://github.com/ccollicutt/tanzu-build-service-control-plane-demo
 cd tanzu-build-service-control-plane-demo
+```
+
+## Configuration your environment
+
+If you are using multiple image repositories, it can get confusing and it's easy to make a mistake in terms of which one you are pushing images to.
+
+In this demo I use two repositories, though it could just be a single repository.
+
+1. A repository specifically for images *used* by TBS
+2. A repository that is the *target* for images that TBS *builds*
+
+One example of how to configure this is to use something like `direnv`. (Of course, this assumes Linux.)
+
+```
+$ which direnv
+/usr/bin/direnv
+```
+
+First, copy the example envrc file.
+
+```
+$ # in the github cloned repository
+$ cp envrc-example .envrc
+$ direnv allow
+```
+
+Eg.
+
+```
+$ direnv reload
+direnv: loading ~/working/tanzu-build-service-control-plane-demo/.envrc
+direnv: export +REPOSITORY +TBS_REPOSITORY
+```
+
+## Trivy
+
+If this demo has been done previously on the local machine, a good idea to clear the trivy cache.
+
+```
+trivy image --clear-cache
 ```
 
 ## Using TBS as a Container Image Control Plane
@@ -155,6 +194,8 @@ $ grep 52a9a0002b16042b4d34382bc244f9b6bf8fd409557fe3ca8667a5a52da44608 descript
 Create the stack.
 
 ```bash
+kn default # ensure using the right namespace
+[ -z "$TBS_REPOSITORY" ] && echo "ERROR: Please set TBS_REGISTRY variable" || \
 kp clusterstack create demo-stack  \
   --build-image $TBS_REPOSITORY/build@sha256:cf87e6b7e69c5394440c11d41c8d46eade57d13236e4fb79c80227cc15d33abf \
   --run-image $TBS_REPOSITORY/run@sha256:52a9a0002b16042b4d34382bc244f9b6bf8fd409557fe3ca8667a5a52da44608
@@ -178,6 +219,8 @@ ClusterStack "demo-stack" created
 And create a customer cluster builder that uses that stack.
 
 ```bash
+kn default
+[ -z "$TBS_REPOSITORY" ] && echo "ERROR: Please set TBS_REGISTRY variable" || \
 kp clusterbuilder create demo-cluster-builder \
   --tag $TBS_REPOSITORY/demo-cluster-builder \
   --order demo-cluster-builder-order.yaml \
@@ -214,8 +257,10 @@ export TBS_REPOSITORY=<your container image registry>
 Now build the image.
 
 ```bash
+kn default
+[ -z "$REPOSITORY" ] && echo "ERROR: Please set TBS_REGISTRY variable" || \
 kp image create demo-image \
---tag $TBS_REPOSITORY/demo-image \
+--tag $REPOSITORY/demo-image \
 --git https://github.com/ccollicutt/tbs-sample-apps/ \
 --sub-path sample-apps/go \
 --git-revision main \
@@ -225,7 +270,7 @@ kp image create demo-image \
 Watch the logs of the image being built.
 
 ```
-kb build logs demo-image
+kp build logs demo-image
 ```
 
 <details><summary>View output</summary>
@@ -337,6 +382,7 @@ Now we want to get rid of those pesky CVEs.
 We'll use the build and run images from the more recent descriptor file which will have most, if not all, of the CVEs fixed.
 
 ```bash
+[ -z "$TBS_REPOSITORY" ] && echo "ERROR: Please set TBS_REGISTRY variable" || \
 kp clusterstack update demo-stack  \
   --build-image $TBS_REPOSITORY/build@sha256:d0e8bfb686fd3bc5463bd79f33a31d1dc9528a37f88ffc26a64ff0949173223d \
   --run-image $TBS_REPOSITORY/run@sha256:84eff69367995f990875cdbd47b2dc427c0bac27ae15f2a115090962e6969421
@@ -346,6 +392,7 @@ kp clusterstack update demo-stack  \
 <p>
 
 ```
+[ -z "$TBS_REGISTRY" ] && echo "ERROR: Please set TBS_REGISTRY variable" || \
 kp clusterstack update demo-stack  \
 >   --build-image $TBS_REPOSITORY/build@sha256:d0e8bfb686fd3bc5463bd79f33a31d1dc9528a37f88ffc26a64ff0949173223d \
 >   --run-image $TBS_REPOSITORY/run@sha256:84eff69367995f990875cdbd47b2dc427c0bac27ae15f2a115090962e6969421
@@ -360,6 +407,25 @@ ClusterStack "demo-stack" updated
 
 Updating the stack will cause a rebuild of the image.
 
+```bash
+kp build list
+```
+
+<details><summary>View output</summary>
+<p>
+
+```bash
+$ kp build list
+BUILD    STATUS      IMAGE
+                                     REASON
+1        SUCCESS     gcr.io/pa-ccollicutt/build-service/demo-image@sha256:0e6bd061e1b008d80932c571345423c4a45138235b816104ea7e170efde81010    CONFIG
+2        BUILDING
+                                     STACK
+```
+
+</p>
+</details>
+
 Watch the logs of the build.
 
 ```bash
@@ -370,60 +436,21 @@ kp build logs demo-image
 
 ```bash
 $ kp build logs demo-image
-===> PREPARE
-Build reason(s): TRIGGER
-TRIGGER:
-	+ A new build was manually triggered on Thu, 01 Apr 2021 20:52:35 +0000
+===> REBASE
+Build reason(s): STACK
+STACK:
+	- sha256:52a9a0002b16042b4d34382bc244f9b6bf8fd409557fe3ca8667a5a52da44608
+	+ sha256:84eff69367995f990875cdbd47b2dc427c0bac27ae15f2a115090962e6969421
 Loading secret for "gcr.io" from secret "gcr-secret" at location "/var/build-secrets/gcr-secret"
-Loading secret for "HARBOR_REPO" from secret "harbor-creds" at location "/var/build-secrets/harbor-creds"
-Cloning "https://github.com/ccollicutt/tbs-sample-apps/" @ "513fd440fec8e79bdc78b500b37f6b23881af951"...
-Successfully cloned "https://github.com/ccollicutt/tbs-sample-apps/" @ "513fd440fec8e79bdc78b500b37f6b23881af951" in path "/workspace"
-===> DETECT
-tanzu-buildpacks/go-dist  0.1.5
-tanzu-buildpacks/go-build 0.1.0
-===> ANALYZE
-Restoring metadata for "tanzu-buildpacks/go-dist:go" from cache
-Restoring metadata for "tanzu-buildpacks/go-build:targets" from app image
-Restoring metadata for "tanzu-buildpacks/go-build:gocache" from cache
-===> RESTORE
-Restoring data for "tanzu-buildpacks/go-dist:go" from cache
-Restoring data for "tanzu-buildpacks/go-build:gocache" from cache
-===> BUILD
-Tanzu Go Distribution Buildpack 0.1.5
-  Resolving Go version
-    Candidate version sources (in priority order):
-      <unknown> -> ""
+Loading secret for "harbor.shared.demo.globalbanque.com" from secret "harbor-creds" at location "/var/build-secrets/harbor-creds"
+*** Images (sha256:02fcb91b8de22621938fd885b881843bcfec44f6568821c0e7cc85f9e12a26f6):
+      harbor.shared.demo.globalbanque.com/tbs/demo-image
+      harbor.shared.demo.globalbanque.com/tbs/demo-image:b2.20210503.142906
 
-    Selected Go version (using <unknown>): 1.15.9
-
-  Reusing cached layer /layers/tanzu-buildpacks_go-dist/go
-
-Tanzu Go Build Buildpack 0.1.0
-  Executing build process
-    Running 'go build -o /layers/tanzu-buildpacks_go-build/targets/bin -buildmode pie .'
-      Completed in 433ms
-
-  Assigning launch processes
-    web: /layers/tanzu-buildpacks_go-build/targets/bin/workspace
-    workspace: /layers/tanzu-buildpacks_go-build/targets/bin/workspace
-===> EXPORT
-Reusing layers from image 'TBS_REPOSITORY/demo-image@sha256:91d93f1f8312ce0adc3a13024a3605cb5232f6baa2d6bf849ab0e83a043c78b9'
-Adding layer 'tanzu-buildpacks/go-build:targets'
-Reusing 1/1 app layer(s)
-Reusing layer 'launcher'
-Reusing layer 'config'
-Reusing layer 'process-types'
-Adding label 'io.buildpacks.lifecycle.metadata'
-Adding label 'io.buildpacks.build.metadata'
-Adding label 'io.buildpacks.project.metadata'
-Setting default process type 'web'
-*** Images (sha256:7b2321b4a896103a72437ae185b5b62548f655e0092f1456118c5d040e212c97):
-      TBS_REPOSITORY/demo-image
-      TBS_REPOSITORY/demo-image:b3.20210401.205235
-Reusing cache layer 'tanzu-buildpacks/go-dist:go'
-Adding cache layer 'tanzu-buildpacks/go-build:gocache'
+*** Digest: sha256:02fcb91b8de22621938fd885b881843bcfec44f6568821c0e7cc85f9e12a26f6
 ===> COMPLETION
 Build successful
+
 ```
 
 </p></details>
@@ -433,13 +460,13 @@ Build successful
 Get the new version of the image that TBS just built.
 
 ```bash
-docker pull $TBS_REPOSITORY/demo-image
+docker pull $REPOSITORY/demo-image
 ```
 
 <details><summary>View output</summary><p>
 
 ```bash
-$ docker pull $TBS_REPOSITORY/demo-image
+$ docker pull $REPOSITORY/demo-image
 Using default tag: latest
 latest: Pulling from TBS_REPOSITORY/demo-image
 7a3dbe310959: Pull complete 
@@ -463,7 +490,7 @@ TBS_REPOSITORY/demo-image:latest
 Now if we scan the image again it will show fewer, or in this case zero, `HIGH` or `CRITICAL` CVEs. This is expected because the images making up the updated ClusterStack are much newer.
 
 ```bash
-$ trivy -q --severity=HIGH,CRITICAL $TBS_REPOSITORY/demo-image | grep Total
+$ trivy -q --severity=HIGH,CRITICAL $REPOSITORY/demo-image | grep Total
 Total: 0 (HIGH: 0, CRITICAL: 0)
 ```
 
@@ -476,6 +503,14 @@ Now imagine easily and efficiently rebuilding all of your images with a simple c
 Also remember that because of how buildpacks work, we don't have to be scared to update the image because it'll break the application, buidlpacks have separated the operating sytem, dependencies, and application code instead of smashing them together into something unrecognizable (which is basically what Dockerfiles do).
 
 One the images are automagically rebuilt, we can use Kubernetes to recreate all of the pods, and therefore have updated and secure EVERY application in our portfolio.
+
+## Cleanup
+
+```bash
+kp image delete demo-image
+kp clusterbuilder delete demo-cluster-builder
+kp clusterstack delete demo-stack
+```
 
 ## Thanks
 
