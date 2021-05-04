@@ -29,7 +29,9 @@ Once we're done, it's easy to see how we can create a "control plane" for images
 | :large_blue_diamond: This demo has many manual steps. In a production situation this would all be automated and taken care of by the TBS. We perform manual steps here to create "insecure" images used to show how TBS keeps our container images up to date without people in the organization getting engaged in any image management toil.
 |--------------------------------------------------------------------------|
 
-## Requirements 
+## Requirements and setup
+
+### Requirements, aliases, etc
 
 * TBS already installed and configured ito a Kubernetes cluster
 * `pivnet` is installed and can access the Tanzu network
@@ -37,7 +39,7 @@ Once we're done, it's easy to see how we can create a "control plane" for images
 * Docker to pull images
 * `kubens` is aliased to `kn` 
 
-## Clone this repository
+### Clone this repository
 
 Clone a copy of this repository locally.
 
@@ -46,7 +48,7 @@ git clone https://github.com/ccollicutt/tanzu-build-service-control-plane-demo
 cd tanzu-build-service-control-plane-demo
 ```
 
-## Configuration your environment
+### Configure your environment
 
 If you are using multiple image repositories, it can get confusing and it's easy to make a mistake in terms of which one you are pushing images to.
 
@@ -78,7 +80,7 @@ direnv: loading ~/working/tanzu-build-service-control-plane-demo/.envrc
 direnv: export +REPOSITORY +TBS_REPOSITORY
 ```
 
-## Trivy
+### Trivy
 
 If this demo has been done previously on the local machine, a good idea to clear the trivy cache.
 
@@ -254,7 +256,7 @@ First, identify where you are going to push the image once TBS has built it.
 |--------------------------------------------------------------------------|
 
 ```bash
-export TBS_REPOSITORY=<your container image registry>
+export REPOSITORY=<your container image registry>
 ```
 
 Now build the image.
