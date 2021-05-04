@@ -26,7 +26,8 @@ In this demo we will:
 
 Once we're done, it's easy to see how we can create a "control plane" for images and actually be able, from an operational perspective, to rebuild 100s or 1000s of images across the organization in a repeatable, predictable, programmable manner.
 
->NOTE: This is a demo that has many manual steps, but in a production situation this would all be automated and taken care of by the TBS. We perform some manual steps here to create "insecure" images used to show how TBS keeps our container images up to date without people in the organization getting engaged in any image management toil.
+| :large_blue_diamond: This demo has many manual steps. In a production situation this would all be automated and taken care of by the TBS. We perform manual steps here to create "insecure" images used to show how TBS keeps our container images up to date without people in the organization getting engaged in any image management toil.
+|--------------------------------------------------------------------------|
 
 ## Requirements 
 
@@ -37,6 +38,8 @@ Once we're done, it's easy to see how we can create a "control plane" for images
 * `kubens` is aliased to `kn` 
 
 ## Clone this repository
+
+Clone a copy of this repository locally.
 
 ```
 git clone https://github.com/ccollicutt/tanzu-build-service-control-plane-demo
