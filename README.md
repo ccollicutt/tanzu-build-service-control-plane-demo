@@ -263,8 +263,6 @@ default       true     io.buildpacks.stacks.bionic    gcr.io/pa-ccollicutt/build
 full          true     io.buildpacks.stacks.bionic    gcr.io/pa-ccollicutt/build-service/full@sha256:590a549082dd7704b2787c4a448bcf2fd95b38d522a68bd92d90f824349db6e9
 py-builder    true     io.buildpacks.stacks.bionic    gcr.io/pa-ccollicutt/build-service/paketo-buildpacks_python@sha256:e5ce756420e3d152b913f4fa7fa16421249e745204d967bea8330907774d6204
 tiny          true     io.paketo.stacks.tiny          gcr.io/pa-ccollicutt/build-service/tiny@sha256:ba6437ecbcc337101e5c2afdd4feb9576372aef2d4e90f04cb35f14157a7949c
-
- fury-161  ☎   tanzu-build…  1✎  ⎈ tkg-1-3-c…  default 
 $ k get clusterbuilders
 NAME         LATESTIMAGE
                                          READY
@@ -476,19 +474,18 @@ ClusterStack "demo-stack" updated
 Updating the stack will cause a rebuild of the image.
 
 ```bash
-kp build list
+kp build list demo-image
 ```
 
 <details><summary>View output</summary>
 <p>
 
 ```bash
-$ kp build list
-BUILD    STATUS      IMAGE
-                                     REASON
-1        SUCCESS     gcr.io/pa-ccollicutt/build-service/demo-image@sha256:0e6bd061e1b008d80932c571345423c4a45138235b816104ea7e170efde81010    CONFIG
-2        BUILDING
-                                     STACK
+$ kp build list demo-image
+BUILD    STATUS     IMAGE
+                                        REASON
+1        SUCCESS    harbor.shared.demo.globalbanque.com/tbs/demo-image@sha256:e2de21de2d7efce5a6b686ef3b71c7c6d64808a9da4cb64e30203c9bb805d5ce    CONFIG
+2        SUCCESS    harbor.shared.demo.globalbanque.com/tbs/demo-image@sha256:91254e70f251b066fc3e92255870abe7fb84f38d123da1817b17be568a46d317    STACK
 ```
 
 </p>
@@ -579,6 +576,8 @@ kp image delete demo-image
 kp clusterbuilder delete demo-cluster-builder
 kp clusterstack delete demo-stack
 ```
+
+* Remove the images from your container image registry
 
 ## Thanks
 
