@@ -92,6 +92,8 @@ trivy image --clear-cache
 
 ### Download the descriptor files.
 
+The descriptor files can be found on the [Tanzu Network](https://network.pivotal.io/products/tbs-dependencies/).
+
 First, let's get an old descriptor.
 
 ```bash
@@ -187,6 +189,28 @@ Set your repository.
 export TBS_REPOSITORY=<your container image registry>
 ```
 
+Show the clusterstacks using `kp`.
+
+```
+$ kp clusterstack list
+NAME       READY    ID
+base       True     io.buildpacks.stacks.bionic
+default    True     io.buildpacks.stacks.bionic
+full       True     io.buildpacks.stacks.bionic
+tiny       True     io.paketo.stacks.tiny
+```
+
+Show the clusterstacks using `kubectl`.
+
+```
+$ k get clusterstacks
+NAME      READY
+base      True
+default   True
+full      True
+tiny      True
+```
+
 Create clusterstack based on "insecure" (ie. older) images, which are part of the `descriptor-100.0.55.yaml` descriptor.
 
 ```bash
@@ -221,11 +245,44 @@ ClusterStack "demo-stack" created
 </p>
 </details>
 
+Show the clusterbuilders.
+
+```
+kp clusterbuilder list
+k get clusterbuilders
+```
+
+<details><summary>View output</summary>
+<p>
+
+```
+$ kp clusterbuilder list
+NAME          READY    STACK                          IMAGE
+base          true     io.buildpacks.stacks.bionic    gcr.io/pa-ccollicutt/build-service/base@sha256:69c4b22a7deb2c0a712ef939d3f69aaa9743eecd2d23c087bf369e82552dd90c
+default       true     io.buildpacks.stacks.bionic    gcr.io/pa-ccollicutt/build-service/default@sha256:69c4b22a7deb2c0a712ef939d3f69aaa9743eecd2d23c087bf369e82552dd90c
+full          true     io.buildpacks.stacks.bionic    gcr.io/pa-ccollicutt/build-service/full@sha256:590a549082dd7704b2787c4a448bcf2fd95b38d522a68bd92d90f824349db6e9
+py-builder    true     io.buildpacks.stacks.bionic    gcr.io/pa-ccollicutt/build-service/paketo-buildpacks_python@sha256:e5ce756420e3d152b913f4fa7fa16421249e745204d967bea8330907774d6204
+tiny          true     io.paketo.stacks.tiny          gcr.io/pa-ccollicutt/build-service/tiny@sha256:ba6437ecbcc337101e5c2afdd4feb9576372aef2d4e90f04cb35f14157a7949c
+
+ fury-161  ☎   tanzu-build…  1✎  ⎈ tkg-1-3-c…  default 
+$ k get clusterbuilders
+NAME         LATESTIMAGE
+                                         READY
+base         gcr.io/pa-ccollicutt/build-service/base@sha256:69c4b22a7deb2c0a712ef939d3f69aaa9743eecd2d23c087bf369e82552dd90c                       True
+default      gcr.io/pa-ccollicutt/build-service/default@sha256:69c4b22a7deb2c0a712ef939d3f69aaa9743eecd2d23c087bf369e82552dd90c                    True
+full         gcr.io/pa-ccollicutt/build-service/full@sha256:590a549082dd7704b2787c4a448bcf2fd95b38d522a68bd92d90f824349db6e9                       True
+py-builder   gcr.io/pa-ccollicutt/build-service/paketo-buildpacks_python@sha256:e5ce756420e3d152b913f4fa7fa16421249e745204d967bea8330907774d6204   True
+tiny         gcr.io/pa-ccollicutt/build-service/tiny@sha256:ba6437ecbcc337101e5c2afdd4feb9576372aef2d4e90f04cb35f14157a7949c                       True
+```
+
+</p>
+</details>
+
 And create a customer cluster builder that uses that stack.
 
 ```bash
 kn default
-[ -z "$TBS_REPOSITORY" ] && echo "ERROR: Please set TBS_REGISTRY variable" || \
+[ -z "$TBS_REPOSITORY" ] && echo "ERROR: Please set TBS_REPOSITORY variable" || \
 kp clusterbuilder create demo-cluster-builder \
   --tag $TBS_REPOSITORY/demo-cluster-builder \
   --order demo-cluster-builder-order.yaml \
@@ -263,7 +320,7 @@ Now build the image.
 
 ```bash
 kn default
-[ -z "$REPOSITORY" ] && echo "ERROR: Please set TBS_REGISTRY variable" || \
+[ -z "$REPOSITORY" ] && echo "ERROR: Please set REPOSITORY variable" || \
 kp image create demo-image \
 --tag $REPOSITORY/demo-image \
 --git https://github.com/ccollicutt/tbs-sample-apps/ \
@@ -364,10 +421,16 @@ $ kubectl get image demo-image -oyaml| grep "kind: ClusterBuilder" -A 1
 
 ### Investigate the Image
 
+First, if the image has been pulled in previous demos, remove it locally.
+
+```
+docker rmi $REPOSITORY/demo-image
+```
+
 Pull the image locally.
 
 ```bash
-docker pull $TBS_REPOSITORY/demo-image
+docker pull $REPOSITORY/demo-image
 ```
 
 Use Trivy to scan the image for security issues, noting how many `HIGH` or `CRITICAL` there are.
@@ -376,7 +439,7 @@ Use Trivy to scan the image for security issues, noting how many `HIGH` or `CRIT
 |--------------------------------------------------------------------------|
 
 ```bash
-$ trivy -q --severity=HIGH,CRITICAL $TBS_REPOSITORY/demo-image | grep Total
+$ trivy -q --severity=HIGH,CRITICAL $REPOSITORY/demo-image | grep Total
 Total: 7 (HIGH: 7, CRITICAL: 0)
 ```
 
